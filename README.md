@@ -7,6 +7,7 @@
 - 跟踪蜜柑计划（Mikan Project）订阅
 - 自动解析番剧标题，提取关键信息
 - 通过 TMDB API 获取番剧详细信息
+- 刮削番剧页面，获取原始 RSS 链接和封面图片
 - 自动屏蔽已处理的番剧，避免重复
 - 定时任务（30分钟执行一次）
 
@@ -81,6 +82,8 @@ python main.py
 | blocked_keyword | TEXT | 屏蔽关键词 |
 | alias_names | TEXT | 别名 |
 | total_episodes | INTEGER | 总集数 |
+| raw_rss_url | TEXT | 原始 RSS 订阅链接 |
+| img_url | TEXT | 封面图片链接 |
 | status | TEXT | 状态（active/inactive） |
 | source | TEXT | 来源（mikan） |
 | created_at | TIMESTAMP | 创建时间 |
@@ -92,8 +95,40 @@ python main.py
 2. 解析标题，提取番剧名称
 3. 检查是否已屏蔽（避免重复处理）
 4. 搜索 TMDB，获取番剧 ID 和详细信息
-5. 存储到数据库，并添加屏蔽关键词
-6. 下次执行时自动跳过已处理的番剧
+5. 刮削单集页面，提取：
+   - 原始 RSS 订阅链接（bangumiId + subgroupid）
+   - 封面图片链接
+6. 存储到数据库，并添加屏蔽关键词
+7. 下次执行时自动跳过已处理的番剧
+
+## API 使用
+
+### 通过 RSS URL 添加订阅
+
+可以直接通过 raw RSS URL 添加订阅（为 Telegram Bot 集成准备）：
+
+```python
+from src.services.subscription_tracker import SubscriptionTracker
+
+tracker = SubscriptionTracker()
+success = tracker.add_subscription_by_rss_url(
+    "https://mikanani.me/RSS/Bangumi?bangumiId=3736&subgroupid=370"
+)
+```
+
+**工作流程：**
+1. 从 RSS URL 解析 `bangumiId` 和 `subgroupid`
+2. 构建 Bangumi 页面 URL：`https://mikanani.me/Home/Bangumi/{bangumiId}#{subgroupid}`
+3. 刮削页面获取封面图片
+4. 从 RSS feed 获取番剧名称
+5. 搜索 TMDB 获取详细信息
+6. 存储到数据库
+
+**测试：**
+```bash
+source venv/bin/activate
+python demo_add_by_url.py
+```
 
 ## 依赖
 
@@ -101,3 +136,5 @@ python main.py
 - tmdbv3api: TMDB API 封装
 - python-dotenv: 环境变量管理
 - schedule: 定时任务
+- beautifulsoup4: HTML 解析
+- requests: HTTP 请求

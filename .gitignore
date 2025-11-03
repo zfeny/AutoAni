@@ -25,3 +25,7 @@ logs/
 .idea/
 *.swp
 *.swo
+demo_add_by_url.py
+test_add_by_url.py
+
+test_run.py

@@ -37,6 +37,8 @@ class Database:
             blocked_keyword TEXT,
             alias_names TEXT,
             total_episodes INTEGER,
+            raw_rss_url TEXT,
+            img_url TEXT,
             status TEXT DEFAULT 'active',
             source TEXT DEFAULT 'mikan',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -65,12 +67,14 @@ class Database:
         cursor.execute("""
         INSERT OR REPLACE INTO series
         (tmdb_id, title, series_name, blocked_keyword, alias_names,
-         total_episodes, source, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         total_episodes, raw_rss_url, img_url, source, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             tmdb_id, title, series_name, blocked_keyword,
             kwargs.get('alias_names'),
             kwargs.get('total_episodes'),
+            kwargs.get('raw_rss_url'),
+            kwargs.get('img_url'),
             kwargs.get('source', 'mikan'),
             datetime.now().isoformat()
         ))

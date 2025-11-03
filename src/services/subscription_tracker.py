@@ -4,6 +4,7 @@
 from typing import List, Dict
 from src.services.rss_fetcher import RSSFetcher
 from src.parsers.title_parser import TitleParser
+from src.parsers.page_scraper import MikanPageScraper
 from src.services.tmdb_service import TMDBService
 from src.models.database import Database
 
@@ -14,6 +15,7 @@ class SubscriptionTracker:
     def __init__(self):
         self.rss_fetcher = RSSFetcher()
         self.title_parser = TitleParser()
+        self.page_scraper = MikanPageScraper()
         self.tmdb_service = TMDBService()
         self.db = Database()
 
@@ -57,6 +59,7 @@ class SubscriptionTracker:
             unique_series[series_name] = {
                 'original_title': title,
                 'series_name': series_name,
+                'episode_link': item['link'],  # 保存单集链接用于刮削
             }
 
         print(f"去重后剩余 {len(unique_series)} 个番剧")
@@ -90,6 +93,20 @@ class SubscriptionTracker:
         # 获取详细信息
         details = self.tmdb_service.get_series_details(tmdb_id)
 
+        # 刮削单集页面，获取 raw_rss_url 和 img_url
+        episode_link = data.get('episode_link')
+        raw_rss_url = None
+        img_url = None
+
+        if episode_link:
+            print(f"刮削页面: {episode_link}")
+            scrape_result = self.page_scraper.scrape_episode_page(episode_link)
+            if scrape_result:
+                raw_rss_url = scrape_result.get('raw_rss_url')
+                img_url = scrape_result.get('img_url')
+                print(f"获取到 raw_rss_url: {raw_rss_url}")
+                print(f"获取到 img_url: {img_url}")
+
         # 存储到数据库
         self.db.insert_series(
             tmdb_id=tmdb_id,
@@ -98,10 +115,75 @@ class SubscriptionTracker:
             blocked_keyword=series_name,  # 使用番剧名作为屏蔽关键词
             alias_names=tmdb_result.get('original_name'),
             total_episodes=details.get('number_of_episodes') if details else None,
+            raw_rss_url=raw_rss_url,
+            img_url=img_url,
             source='mikan'
         )
 
         print(f"已添加到数据库: {series_name}")
+
+    def add_subscription_by_rss_url(self, raw_rss_url: str) -> bool:
+        """
+        通过 raw_rss_url 添加订阅（用于 Telegram Bot）
+
+        Args:
+            raw_rss_url: RSS URL，如 https://mikanani.me/RSS/Bangumi?bangumiId=3736&subgroupid=370
+
+        Returns:
+            是否成功添加
+        """
+        print(f"\n通过 RSS URL 添加订阅: {raw_rss_url}")
+
+        # 刮削 Bangumi 页面
+        scrape_result = self.page_scraper.scrape_bangumi_page_from_rss_url(raw_rss_url)
+
+        if not scrape_result:
+            print("刮削失败")
+            return False
+
+        series_name = scrape_result.get('series_name')
+        img_url = scrape_result.get('img_url')
+
+        if not series_name:
+            print("未能获取番剧名称")
+            return False
+
+        print(f"番剧名称: {series_name}")
+        print(f"封面图片: {img_url}")
+
+        # 检查是否已存在
+        if self.db.is_blocked(series_name):
+            print(f"番剧已存在: {series_name}")
+            return False
+
+        # 搜索 TMDB
+        tmdb_result = self.tmdb_service.search_anime(series_name)
+
+        if not tmdb_result:
+            print(f"未找到 TMDB 信息: {series_name}")
+            return False
+
+        tmdb_id = tmdb_result['tmdb_id']
+        print(f"找到 TMDB ID: {tmdb_id} - {tmdb_result['name']}")
+
+        # 获取详细信息
+        details = self.tmdb_service.get_series_details(tmdb_id)
+
+        # 存储到数据库
+        self.db.insert_series(
+            tmdb_id=tmdb_id,
+            title=series_name,  # 使用番剧名称作为标题
+            series_name=series_name,
+            blocked_keyword=series_name,
+            alias_names=tmdb_result.get('original_name'),
+            total_episodes=details.get('number_of_episodes') if details else None,
+            raw_rss_url=raw_rss_url,
+            img_url=img_url,
+            source='mikan'
+        )
+
+        print(f"✓ 成功添加订阅: {series_name}")
+        return True
 
     def get_all_subscriptions(self) -> List[Dict]:
         """
