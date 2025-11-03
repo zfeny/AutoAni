@@ -1,0 +1,4 @@
+feedparser>=6.0.0
+tmdbv3api>=1.9.0
+python-dotenv>=1.0.0
+schedule>=1.2.0
