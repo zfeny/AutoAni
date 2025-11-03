@@ -7,6 +7,7 @@ from src.parsers.title_parser import TitleParser
 from src.parsers.page_scraper import MikanPageScraper
 from src.services.tmdb_service import TMDBService
 from src.models.database import Database
+from src.utils.season_helper import SeasonHelper
 
 
 class SubscriptionTracker:
@@ -18,6 +19,7 @@ class SubscriptionTracker:
         self.page_scraper = MikanPageScraper()
         self.tmdb_service = TMDBService()
         self.db = Database()
+        self.season_helper = SeasonHelper()
 
     def process_subscriptions(self):
         """
@@ -107,6 +109,13 @@ class SubscriptionTracker:
                 print(f"获取到 raw_rss_url: {raw_rss_url}")
                 print(f"获取到 img_url: {img_url}")
 
+        # 生成季节标签
+        first_air_date = tmdb_result.get('first_air_date') or (details.get('first_air_date') if details else None)
+        season_tag = None
+        if first_air_date:
+            season_tag = self.season_helper.generate_season_tag(first_air_date)
+            print(f"生成季节标签: {season_tag}")
+
         # 存储到数据库
         self.db.insert_series(
             tmdb_id=tmdb_id,
@@ -117,6 +126,8 @@ class SubscriptionTracker:
             total_episodes=details.get('number_of_episodes') if details else None,
             raw_rss_url=raw_rss_url,
             img_url=img_url,
+            first_air_date=first_air_date,
+            season_tag=season_tag,
             source='mikan'
         )
 
@@ -169,6 +180,13 @@ class SubscriptionTracker:
         # 获取详细信息
         details = self.tmdb_service.get_series_details(tmdb_id)
 
+        # 生成季节标签
+        first_air_date = tmdb_result.get('first_air_date') or (details.get('first_air_date') if details else None)
+        season_tag = None
+        if first_air_date:
+            season_tag = self.season_helper.generate_season_tag(first_air_date)
+            print(f"生成季节标签: {season_tag}")
+
         # 存储到数据库
         self.db.insert_series(
             tmdb_id=tmdb_id,
@@ -179,6 +197,8 @@ class SubscriptionTracker:
             total_episodes=details.get('number_of_episodes') if details else None,
             raw_rss_url=raw_rss_url,
             img_url=img_url,
+            first_air_date=first_air_date,
+            season_tag=season_tag,
             source='mikan'
         )
 

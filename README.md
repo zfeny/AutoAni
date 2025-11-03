@@ -8,6 +8,7 @@
 - 自动解析番剧标题，提取关键信息
 - 通过 TMDB API 获取番剧详细信息
 - 刮削番剧页面，获取原始 RSS 链接和封面图片
+- **自动生成季节标签**（如"2025年秋季番组"）
 - 自动屏蔽已处理的番剧，避免重复
 - 定时任务（30分钟执行一次）
 
@@ -84,6 +85,8 @@ python main.py
 | total_episodes | INTEGER | 总集数 |
 | raw_rss_url | TEXT | 原始 RSS 订阅链接 |
 | img_url | TEXT | 封面图片链接 |
+| first_air_date | TEXT | 首播日期（YYYY-MM-DD） |
+| season_tag | TEXT | 季节标签（如"2025年秋季番组"） |
 | status | TEXT | 状态（active/inactive） |
 | source | TEXT | 来源（mikan） |
 | created_at | TIMESTAMP | 创建时间 |
@@ -129,6 +132,20 @@ success = tracker.add_subscription_by_rss_url(
 source venv/bin/activate
 python demo_add_by_url.py
 ```
+
+## 季节标签
+
+系统会根据番剧的首播日期（`first_air_date`）自动生成季节标签。
+
+**季节映射规则（日本动画标准）：**
+- 1-3月 → 冬季番组
+- 4-6月 → 春季番组
+- 7-9月 → 夏季番组
+- 10-12月 → 秋季番组
+
+**示例：**
+- 首播日期：`2025-10-03` → 季节标签：`2025年秋季番组`
+- 首播日期：`2025-07-11` → 季节标签：`2025年夏季番组`
 
 ## 依赖
 

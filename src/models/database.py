@@ -39,6 +39,8 @@ class Database:
             total_episodes INTEGER,
             raw_rss_url TEXT,
             img_url TEXT,
+            first_air_date TEXT,
+            season_tag TEXT,
             status TEXT DEFAULT 'active',
             source TEXT DEFAULT 'mikan',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -67,14 +69,17 @@ class Database:
         cursor.execute("""
         INSERT OR REPLACE INTO series
         (tmdb_id, title, series_name, blocked_keyword, alias_names,
-         total_episodes, raw_rss_url, img_url, source, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         total_episodes, raw_rss_url, img_url, first_air_date, season_tag,
+         source, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             tmdb_id, title, series_name, blocked_keyword,
             kwargs.get('alias_names'),
             kwargs.get('total_episodes'),
             kwargs.get('raw_rss_url'),
             kwargs.get('img_url'),
+            kwargs.get('first_air_date'),
+            kwargs.get('season_tag'),
             kwargs.get('source', 'mikan'),
             datetime.now().isoformat()
         ))
