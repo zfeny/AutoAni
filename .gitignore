@@ -28,3 +28,4 @@ logs/
 demo_add_by_url.py
 test_add_by_url.py
 test_run.py
+test_scrape_episodes.py

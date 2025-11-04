@@ -41,6 +41,9 @@ class Database:
             img_url TEXT,
             first_air_date TEXT,
             season_tag TEXT,
+            fansub_group TEXT,
+            subtitle_lang TEXT,
+            last_scraped_at TIMESTAMP,
             status TEXT DEFAULT 'active',
             source TEXT DEFAULT 'mikan',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -57,6 +60,35 @@ class Database:
         CREATE INDEX IF NOT EXISTS idx_blocked_keyword ON series(blocked_keyword)
         """)
 
+        # 创建 episodes 表
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS episodes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tmdb_id INTEGER NOT NULL,
+            episode_number INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            torrent_link TEXT NOT NULL,
+            episode_link TEXT,
+            file_size INTEGER,
+            pub_date TEXT,
+            subtitle_lang TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(tmdb_id, episode_number, subtitle_lang),
+            FOREIGN KEY(tmdb_id) REFERENCES series(tmdb_id)
+        )
+        """)
+
+        # 创建 episodes 表索引
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_episodes_tmdb_id ON episodes(tmdb_id)
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_episodes_status ON episodes(status)
+        """)
+
         conn.commit()
         self.close()
 
@@ -70,8 +102,8 @@ class Database:
         INSERT OR REPLACE INTO series
         (tmdb_id, title, series_name, blocked_keyword, alias_names,
          total_episodes, raw_rss_url, img_url, first_air_date, season_tag,
-         source, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         fansub_group, subtitle_lang, last_scraped_at, source, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             tmdb_id, title, series_name, blocked_keyword,
             kwargs.get('alias_names'),
@@ -80,6 +112,9 @@ class Database:
             kwargs.get('img_url'),
             kwargs.get('first_air_date'),
             kwargs.get('season_tag'),
+            kwargs.get('fansub_group'),
+            kwargs.get('subtitle_lang'),
+            kwargs.get('last_scraped_at'),
             kwargs.get('source', 'mikan'),
             datetime.now().isoformat()
         ))
@@ -116,3 +151,97 @@ class Database:
         self.close()
 
         return [dict(row) for row in results]
+
+    def insert_episode(self, tmdb_id: int, episode_number: int, title: str,
+                      torrent_link: str, **kwargs):
+        """插入或更新剧集信息"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT OR REPLACE INTO episodes
+        (tmdb_id, episode_number, title, torrent_link, episode_link,
+         file_size, pub_date, subtitle_lang, status, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            tmdb_id, episode_number, title, torrent_link,
+            kwargs.get('episode_link'),
+            kwargs.get('file_size'),
+            kwargs.get('pub_date'),
+            kwargs.get('subtitle_lang'),
+            kwargs.get('status', 'pending'),
+            datetime.now().isoformat()
+        ))
+
+        conn.commit()
+        self.close()
+
+    def get_episodes_by_series(self, tmdb_id: int):
+        """获取某个番剧的所有剧集"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT * FROM episodes WHERE tmdb_id = ?
+        ORDER BY episode_number ASC
+        """, (tmdb_id,))
+
+        results = cursor.fetchall()
+        self.close()
+
+        return [dict(row) for row in results]
+
+    def get_episodes_by_status(self, status: str):
+        """按状态获取剧集"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT * FROM episodes WHERE status = ?
+        ORDER BY created_at DESC
+        """, (status,))
+
+        results = cursor.fetchall()
+        self.close()
+
+        return [dict(row) for row in results]
+
+    def update_episode_status(self, episode_id: int, status: str):
+        """更新剧集状态"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE episodes SET status = ?, updated_at = ?
+        WHERE id = ?
+        """, (status, datetime.now().isoformat(), episode_id))
+
+        conn.commit()
+        self.close()
+
+    def update_series_last_scraped(self, tmdb_id: int):
+        """更新番剧最后刮削时间"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE series SET last_scraped_at = ?, updated_at = ?
+        WHERE tmdb_id = ?
+        """, (datetime.now().isoformat(), datetime.now().isoformat(), tmdb_id))
+
+        conn.commit()
+        self.close()
+
+    def update_series_subtitle_lang(self, tmdb_id: int, subtitle_lang: str,
+                                   fansub_group: str = None):
+        """更新番剧字幕语言偏好"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE series SET subtitle_lang = ?, fansub_group = ?, updated_at = ?
+        WHERE tmdb_id = ?
+        """, (subtitle_lang, fansub_group, datetime.now().isoformat(), tmdb_id))
+
+        conn.commit()
+        self.close()
