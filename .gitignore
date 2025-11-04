@@ -29,3 +29,6 @@ demo_add_by_url.py
 test_add_by_url.py
 test_run.py
 test_scrape_episodes.py
+test_openlist.py
+test_openlist_client.py
+test_scanner.py

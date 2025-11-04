@@ -89,6 +89,32 @@ class Database:
         CREATE INDEX IF NOT EXISTS idx_episodes_status ON episodes(status)
         """)
 
+        # 创建 openlist 表
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS openlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tmdb_id INTEGER,
+            episode_number INTEGER,
+            file_path TEXT NOT NULL UNIQUE,
+            file_name TEXT NOT NULL,
+            file_size INTEGER,
+            modified_at TEXT,
+            status TEXT DEFAULT 'available',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(tmdb_id) REFERENCES series(tmdb_id)
+        )
+        """)
+
+        # 创建 openlist 表索引
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_openlist_tmdb_id ON openlist(tmdb_id)
+        """)
+
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_openlist_episode ON openlist(tmdb_id, episode_number)
+        """)
+
         conn.commit()
         self.close()
 
@@ -245,3 +271,55 @@ class Database:
 
         conn.commit()
         self.close()
+
+    def insert_openlist_file(self, file_path: str, file_name: str, **kwargs):
+        """插入或更新 OpenList 文件信息"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT OR REPLACE INTO openlist
+        (file_path, file_name, tmdb_id, episode_number, file_size, modified_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            file_path, file_name,
+            kwargs.get('tmdb_id'),
+            kwargs.get('episode_number'),
+            kwargs.get('file_size'),
+            kwargs.get('modified_at'),
+            datetime.now().isoformat()
+        ))
+
+        conn.commit()
+        self.close()
+
+    def clear_openlist(self):
+        """清空 OpenList 表"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM openlist")
+
+        conn.commit()
+        self.close()
+
+    def get_openlist_files(self, tmdb_id: int = None):
+        """获取 OpenList 文件"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        if tmdb_id:
+            cursor.execute("""
+            SELECT * FROM openlist WHERE tmdb_id = ?
+            ORDER BY episode_number ASC
+            """, (tmdb_id,))
+        else:
+            cursor.execute("""
+            SELECT * FROM openlist
+            ORDER BY tmdb_id, episode_number ASC
+            """)
+
+        results = cursor.fetchall()
+        self.close()
+
+        return [dict(row) for row in results]

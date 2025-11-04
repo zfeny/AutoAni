@@ -28,6 +28,12 @@ class Config:
     # 项目根目录
     BASE_DIR = Path(__file__).parent.parent.parent
 
+    # OpenList 配置
+    OPENLIST_URL = os.getenv('OPENLIST_URL')
+    OPENLIST_ACCOUNT = os.getenv('OPENLIST_ACCOUNT')
+    OPENLIST_PASSWORD = os.getenv('OPENLIST_PASSWORD')
+    OPENLIST_DIR = os.getenv('OPENLIST_DIR', '/Animate/Bangumi')
+
     @classmethod
     def validate(cls):
         """验证配置"""

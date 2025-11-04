@@ -65,9 +65,10 @@ class TitleParser:
         try:
             # 匹配 - 数字 或 第x集 等模式
             patterns = [
-                r'-\s*(\d+)\s*(?:\[|$)',  # - 05 [
-                r'第\s*(\d+)\s*[集话話]',   # 第05集
-                r'EP?\s*(\d+)',            # EP05 or E05
+                r'-\s*(\d+)\s*(?:\[|$)',     # - 05 [
+                r'\[(\d+)\]',                 # [01]
+                r'第\s*(\d+)\s*[集话話]',      # 第05集
+                r'EP?\s*(\d+)',               # EP05 or E05
             ]
 
             for pattern in patterns:
