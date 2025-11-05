@@ -140,3 +140,97 @@ class Keyboards:
         """返回主菜单键盘"""
         keyboard = [[InlineKeyboardButton("⬅️ 返回主菜单", callback_data="main_menu")]]
         return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def settings_menu() -> InlineKeyboardMarkup:
+        """设置菜单键盘"""
+        keyboard = [
+            [InlineKeyboardButton("⏰ 定时任务设置", callback_data="settings_scheduler")],
+            [InlineKeyboardButton("▶️ 手动执行任务", callback_data="settings_trigger")],
+            [InlineKeyboardButton("⬅️ 返回主菜单", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def scheduler_settings() -> InlineKeyboardMarkup:
+        """定时任务设置键盘"""
+        keyboard = [
+            [InlineKeyboardButton("📡 RSS刮削间隔", callback_data="set_interval_rss_scrape")],
+            [InlineKeyboardButton("📥 推送下载间隔", callback_data="set_interval_push_download")],
+            [InlineKeyboardButton("✅ 检测完成间隔", callback_data="set_interval_check_complete")],
+            [InlineKeyboardButton("❌ 检测失败间隔", callback_data="set_interval_check_failed")],
+            [InlineKeyboardButton("🔄 重置为默认", callback_data="reset_scheduler_config")],
+            [InlineKeyboardButton("⬅️ 返回设置", callback_data="settings")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def trigger_task_menu() -> InlineKeyboardMarkup:
+        """手动触发任务键盘"""
+        keyboard = [
+            [InlineKeyboardButton("📡 RSS刮削", callback_data="trigger_rss_scrape")],
+            [InlineKeyboardButton("📺 刮削剧集", callback_data="trigger_scrape_episodes")],
+            [InlineKeyboardButton("📥 推送下载", callback_data="trigger_push_download")],
+            [InlineKeyboardButton("✅ 检测完成", callback_data="trigger_check_complete")],
+            [InlineKeyboardButton("❌ 检测失败", callback_data="trigger_check_failed")],
+            [InlineKeyboardButton("⬅️ 返回设置", callback_data="settings")]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def interval_input_cancel(task_name: str) -> InlineKeyboardMarkup:
+        """间隔输入取消键盘"""
+        keyboard = [[InlineKeyboardButton("❌ 取消", callback_data="settings_scheduler")]]
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def system_status_menu(has_mismatched: bool = False) -> InlineKeyboardMarkup:
+        """系统状态菜单键盘"""
+        keyboard = []
+
+        if has_mismatched:
+            keyboard.append([InlineKeyboardButton("⚠️ 查看不匹配项目", callback_data="view_mismatched")])
+
+        keyboard.append([InlineKeyboardButton("⬅️ 返回主菜单", callback_data="main_menu")])
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def mismatched_list(items: List[Dict], page: int, total_pages: int) -> InlineKeyboardMarkup:
+        """不匹配项目列表键盘"""
+        keyboard = []
+
+        # 显示项目（每页5个）
+        for item in items:
+            series_name = item.get('series_name', 'Unknown')
+            episode_number = item.get('episode_number', 0)
+
+            # 截断名称
+            display_name = series_name if len(series_name) <= 20 else series_name[:20] + '...'
+            button_text = f"{display_name} EP{episode_number:02d}"
+
+            keyboard.append([
+                InlineKeyboardButton(button_text, callback_data=f"mismatched_detail_{item['id']}")
+            ])
+
+        # 分页按钮
+        if total_pages > 1:
+            pagination = []
+            if page > 0:
+                pagination.append(InlineKeyboardButton("⬅️ 上一页", callback_data=f"mismatched_page_{page-1}"))
+            pagination.append(InlineKeyboardButton(f"{page+1}/{total_pages}", callback_data="noop"))
+            if page < total_pages - 1:
+                pagination.append(InlineKeyboardButton("下一页 ▶️", callback_data=f"mismatched_page_{page+1}"))
+            keyboard.append(pagination)
+
+        # 返回按钮
+        keyboard.append([InlineKeyboardButton("⬅️ 返回状态", callback_data="system_status")])
+
+        return InlineKeyboardMarkup(keyboard)
+
+    @staticmethod
+    def mismatched_detail(episode_id: int) -> InlineKeyboardMarkup:
+        """不匹配项目详情键盘"""
+        keyboard = [
+            [InlineKeyboardButton("⬅️ 返回列表", callback_data="view_mismatched")]
+        ]
+        return InlineKeyboardMarkup(keyboard)

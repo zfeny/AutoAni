@@ -44,15 +44,13 @@ AutoAni - 自动番剧订阅管理 Bot
 ```
 🎬 AutoAni Bot
 
-自动化番剧订阅管理工具
-
 功能：
 • 📺 订阅管理（新番/老番）
 • ➕ 快速添加订阅
 • 🗑️ 智能删除（可保留文件）
 • 🔔 下载完成通知
 
-GitHub: https://github.com/your-repo
+GitHub: https://github.com/zfeny/AutoAni
 ```
 
 ---

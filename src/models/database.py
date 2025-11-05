@@ -5,7 +5,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class Database:
@@ -213,6 +213,16 @@ class Database:
             """, (status,))
             results = cursor.fetchall()
             return [dict(row) for row in results]
+
+    def get_episode_by_id(self, episode_id: int) -> Optional[Dict]:
+        """根据ID获取剧集"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT * FROM episodes WHERE id = ?
+            """, (episode_id,))
+            result = cursor.fetchone()
+            return dict(result) if result else None
 
     def update_episode_status(self, episode_id: int, status: str):
         """更新剧集状态"""

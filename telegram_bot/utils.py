@@ -5,6 +5,19 @@ from typing import List, Dict
 from telegram_bot.config import BotConfig
 
 
+def is_authorized(user_id: int) -> bool:
+    """
+    检查用户是否有权限
+
+    Args:
+        user_id: Telegram 用户 ID
+
+    Returns:
+        bool: 是否有权限
+    """
+    return user_id in BotConfig.ALLOWED_USERS
+
+
 def generate_progress_bar(current: int, total: int, length: int = 10) -> str:
     """
     生成进度条

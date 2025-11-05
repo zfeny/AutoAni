@@ -24,7 +24,19 @@ AutoAni Telegram Bot 提供便捷的番剧订阅管理功能，支持：
 1. 在 Telegram 搜索 `@userinfobot`
 2. 发送任意消息获取你的用户 ID（纯数字）
 
-### 3. 配置环境变量
+### 3. 配置 Bot 命令
+
+参考 [BOTFATHER_SETUP.md](BOTFATHER_SETUP.md) 在 BotFather 中设置命令列表：
+
+```
+start - 🎬 启动 Bot
+series - 📺 查看订阅
+add - ➕ 添加订阅
+status - 📊 系统状态
+help - ❓ 帮助信息
+```
+
+### 4. 配置环境变量
 
 编辑 `.env` 文件：
 
@@ -51,6 +63,16 @@ python run_bot.py
 编辑 `main.py`，同时启动调度器和 Bot（TODO：待实现）
 
 ## 使用指南
+
+### 可用命令
+
+Bot 提供以下命令：
+
+- `/start` - 启动 Bot，显示主菜单
+- `/series` - 直接查看订阅列表
+- `/add` - 直接添加订阅
+- `/status` - 直接查看系统状态
+- `/help` - 显示帮助信息
 
 ### 启动和主菜单
 

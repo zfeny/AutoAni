@@ -41,6 +41,7 @@ from telegram_bot.handlers.delete_handler import (
     delete_with_files_handler,
     delete_only_handler
 )
+from telegram_bot.handlers import settings_handler as settings_module
 
 # 配置日志
 logging.basicConfig(
@@ -258,23 +259,137 @@ async def system_status_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"OpenList 文件数: {len(openlist_files)}"
     )
 
+    has_mismatched = status_stats['mismatched'] > 0
+
     await query.edit_message_text(
         text=text,
-        reply_markup=Keyboards.back_to_main()
+        reply_markup=Keyboards.system_status_menu(has_mismatched=has_mismatched)
     )
 
 
-async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """设置处理"""
+async def view_mismatched_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """查看不匹配项目"""
     query = update.callback_query
     await query.answer()
 
-    text = "⚙️ 设置\n\n功能开发中..."
+    from src.models.database import Database
+    db = Database()
+
+    # 获取所有 mismatched 剧集
+    mismatched_episodes = db.get_episodes_by_status('mismatched')
+
+    if not mismatched_episodes:
+        await query.edit_message_text(
+            "✅ 没有不匹配的项目",
+            reply_markup=Keyboards.back_to_main()
+        )
+        return
+
+    # 获取 series 信息
+    series_map = db.get_series_map()
+
+    # 丰富剧集信息
+    for episode in mismatched_episodes:
+        series = series_map.get(episode['tmdb_id'])
+        if series:
+            episode['series_name'] = series['series_name']
+
+    # 分页显示
+    page = 0
+    items_per_page = 5
+    total_pages = (len(mismatched_episodes) + items_per_page - 1) // items_per_page
+
+    start_idx = page * items_per_page
+    end_idx = start_idx + items_per_page
+    page_items = mismatched_episodes[start_idx:end_idx]
+
+    text = f"⚠️ 不匹配项目 ({len(mismatched_episodes)} 个)\n\n点击查看详情："
 
     await query.edit_message_text(
         text=text,
-        reply_markup=Keyboards.back_to_main()
+        reply_markup=Keyboards.mismatched_list(page_items, page, total_pages)
     )
+
+
+async def mismatched_page_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """不匹配项目翻页"""
+    query = update.callback_query
+    await query.answer()
+
+    from src.models.database import Database
+    db = Database()
+
+    # 解析页码
+    page = int(query.data.split('_')[-1])
+
+    # 获取所有 mismatched 剧集
+    mismatched_episodes = db.get_episodes_by_status('mismatched')
+    series_map = db.get_series_map()
+
+    for episode in mismatched_episodes:
+        series = series_map.get(episode['tmdb_id'])
+        if series:
+            episode['series_name'] = series['series_name']
+
+    # 分页
+    items_per_page = 5
+    total_pages = (len(mismatched_episodes) + items_per_page - 1) // items_per_page
+
+    start_idx = page * items_per_page
+    end_idx = start_idx + items_per_page
+    page_items = mismatched_episodes[start_idx:end_idx]
+
+    text = f"⚠️ 不匹配项目 ({len(mismatched_episodes)} 个)\n\n点击查看详情："
+
+    await query.edit_message_text(
+        text=text,
+        reply_markup=Keyboards.mismatched_list(page_items, page, total_pages)
+    )
+
+
+async def mismatched_detail_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """不匹配项目详情"""
+    query = update.callback_query
+    await query.answer()
+
+    from src.models.database import Database
+    db = Database()
+
+    # 解析 episode_id
+    episode_id = int(query.data.replace('mismatched_detail_', ''))
+
+    # 获取剧集信息
+    episode = db.get_episode_by_id(episode_id)
+    if not episode:
+        await query.edit_message_text(
+            "❌ 找不到该剧集",
+            reply_markup=Keyboards.back_to_main()
+        )
+        return
+
+    # 获取番剧信息
+    series_map = db.get_series_map()
+    series = series_map.get(episode['tmdb_id'])
+    series_name = series['series_name'] if series else 'Unknown'
+
+    text = (
+        f"⚠️ 不匹配项目详情\n\n"
+        f"🎬 番剧: {series_name}\n"
+        f"📺 剧集: EP{episode['episode_number']:02d}\n"
+        f"🏷️ TMDB ID: {episode['tmdb_id']}\n\n"
+        f"📋 RSS标题:\n{episode.get('rss_title', 'N/A')}\n\n"
+        f"🔗 种子链接:\n{episode.get('torrent_link', 'N/A')}\n\n"
+        f"ℹ️ 原因: 字幕语言不匹配\n"
+        f"期望: 简体中文\n"
+        f"实际: {episode.get('subtitle_lang', 'Unknown')}"
+    )
+
+    await query.edit_message_text(
+        text=text,
+        reply_markup=Keyboards.mismatched_detail(episode_id)
+    )
+
+
 
 
 async def noop_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -327,8 +442,13 @@ def main():
     application.add_handler(CallbackQueryHandler(add_subscription_handler, pattern="^add_subscription$"))
     application.add_handler(CallbackQueryHandler(add_confirm_handler, pattern="^add_confirm_"))
     application.add_handler(CallbackQueryHandler(system_status_handler, pattern="^system_status$"))
-    application.add_handler(CallbackQueryHandler(settings_handler, pattern="^settings$"))
+    application.add_handler(CallbackQueryHandler(view_mismatched_handler, pattern="^view_mismatched$"))
+    application.add_handler(CallbackQueryHandler(mismatched_page_handler, pattern="^mismatched_page_\\d+$"))
+    application.add_handler(CallbackQueryHandler(mismatched_detail_handler, pattern="^mismatched_detail_\\d+$"))
     application.add_handler(CallbackQueryHandler(noop_handler, pattern="^noop$"))
+
+    # 注册设置页处理器
+    settings_module.register_handlers(application)
 
     # 注册消息处理器（用于接收 RSS URL）
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, rss_url_received_handler))
