@@ -25,15 +25,12 @@ class OfflineDownloader:
         pending_episodes = self.db.get_episodes_by_status('pending')
         print(f"找到 {len(pending_episodes)} 个 pending 剧集")
 
-        # 获取 OpenList 中的所有文件
-        openlist_files = self.db.get_openlist_files()
-        print(f"OpenList 中有 {len(openlist_files)} 个文件\n")
+        # 获取 OpenList 索引
+        openlist_index = self.db.get_openlist_index()
+        print(f"OpenList 中有 {len(openlist_index)} 个文件\n")
 
-        # 构建 OpenList 索引 {(tmdb_id, episode_number): file}
-        openlist_index = {}
-        for file in openlist_files:
-            key = (file.get('tmdb_id'), file.get('episode_number'))
-            openlist_index[key] = file
+        # 获取番剧映射
+        series_map = self.db.get_series_map()
 
         # 检测并更新状态
         updated_count = 0
@@ -45,8 +42,8 @@ class OfflineDownloader:
                 self.db.update_episode_status(episode['id'], 'openlist_exists')
                 updated_count += 1
 
-                series = self.db.get_all_series()
-                series_name = next((s['series_name'] for s in series if s['tmdb_id'] == episode['tmdb_id']), 'Unknown')
+                series = series_map.get(episode['tmdb_id'])
+                series_name = series['series_name'] if series else 'Unknown'
                 print(f"✓ {series_name} EP{episode['episode_number']:02d} - 已存在于 OpenList")
 
         print(f"\n更新了 {updated_count} 个剧集状态")
@@ -74,19 +71,12 @@ class OfflineDownloader:
         scanner = OpenListScanner()
         scanner.scan_and_update()
 
-        # 获取更新后的 OpenList 文件
-        openlist_files = self.db.get_openlist_files()
-        print(f"OpenList 中有 {len(openlist_files)} 个文件\n")
+        # 获取更新后的 OpenList 索引
+        openlist_index = self.db.get_openlist_index()
+        print(f"OpenList 中有 {len(openlist_index)} 个文件\n")
 
-        # 构建 OpenList 索引
-        openlist_index = {}
-        for file in openlist_files:
-            key = (file.get('tmdb_id'), file.get('episode_number'))
-            openlist_index[key] = file
-
-        # 获取 series 信息
-        series_list = self.db.get_all_series()
-        series_map = {s['tmdb_id']: s for s in series_list}
+        # 获取番剧映射
+        series_map = self.db.get_series_map()
 
         # 检查每个 downloading 剧集
         completed_count = 0
@@ -125,9 +115,8 @@ class OfflineDownloader:
         # 获取 pending 状态的剧集
         pending_episodes = self.db.get_episodes_by_status('pending')
 
-        # 丰富信息
-        series_list = self.db.get_all_series()
-        series_map = {s['tmdb_id']: s for s in series_list}
+        # 获取番剧映射并丰富信息
+        series_map = self.db.get_series_map()
 
         missing = []
         for episode in pending_episodes:

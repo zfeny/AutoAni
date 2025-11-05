@@ -8,6 +8,13 @@ from typing import Optional
 class SubtitleHelper:
     """字幕语言辅助工具"""
 
+    # 字幕语言检测规则（按优先级排序）
+    SUBTITLE_PATTERNS = [
+        ('chs_cht', ['简繁', '简繁内封', '简繁内嵌']),
+        ('chs', ['简体', '简中', '简日', '简体内嵌', '简体内封', 'chs']),
+        ('cht', ['繁体', '繁中', '繁日', '繁体内嵌', '繁体内封', 'cht']),
+    ]
+
     @staticmethod
     def detect_subtitle_lang(title: str) -> Optional[str]:
         """
@@ -22,28 +29,17 @@ class SubtitleHelper:
         if not title:
             return None
 
-        # 简繁内封（必须优先检测，避免被简体匹配）
-        if any(k in title for k in ['简繁', '简繁内封', '简繁内嵌']):
-            return 'chs_cht'
-
-        # 简体
-        if any(k in title for k in ['简体', '简中', '简日', '简体内嵌', '简体内封']):
-            return 'chs'
-
-        # 检查 CHS（不包含 CHT）
         title_lower = title.lower()
-        if 'chs' in title_lower and 'cht' not in title_lower:
-            return 'chs'
 
-        # 繁体
-        if any(k in title for k in ['繁体', '繁中', '繁日', '繁体内嵌', '繁体内封']):
-            return 'cht'
+        # 按优先级检测
+        for lang, keywords in SubtitleHelper.SUBTITLE_PATTERNS:
+            for keyword in keywords:
+                # CHS 特殊处理：避免匹配到 CHT
+                if keyword == 'chs' and 'cht' in title_lower:
+                    continue
+                if keyword.lower() in title_lower:
+                    return lang
 
-        # 检查 CHT
-        if 'cht' in title_lower:
-            return 'cht'
-
-        # 无法识别
         return None
 
     @staticmethod
