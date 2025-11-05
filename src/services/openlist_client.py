@@ -157,3 +157,61 @@ class OpenListClient:
         import os
         ext = os.path.splitext(filename)[1].lower()
         return ext in self.VIDEO_EXTENSIONS
+
+    def delete_file(self, file_path: str) -> bool:
+        """
+        删除文件
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            bool: 是否删除成功
+        """
+        if not self.token:
+            if not self.login():
+                return False
+
+        url = f"{self.base_url}/api/fs/remove"
+
+        payload = {
+            "names": [file_path],
+            "dir": ""  # 使用绝对路径时为空
+        }
+
+        try:
+            response = requests.post(url, json=payload, headers=self._get_headers(), timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+
+            if data.get('code') == 200:
+                return True
+            else:
+                print(f"✗ 删除文件失败: {data.get('message', 'Unknown error')}")
+                return False
+
+        except requests.exceptions.RequestException as e:
+            print(f"✗ 删除文件请求失败: {e}")
+            return False
+
+    def delete_files_batch(self, file_paths: List[str]) -> tuple:
+        """
+        批量删除文件
+
+        Args:
+            file_paths: 文件路径列表
+
+        Returns:
+            tuple: (成功数量, 失败数量)
+        """
+        success = 0
+        failed = 0
+
+        for file_path in file_paths:
+            if self.delete_file(file_path):
+                success += 1
+            else:
+                failed += 1
+
+        return success, failed

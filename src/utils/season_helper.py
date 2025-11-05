@@ -2,7 +2,7 @@
 季节标签辅助函数
 """
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class SeasonHelper:
@@ -15,6 +15,32 @@ class SeasonHelper:
         7: "夏季", 8: "夏季", 9: "夏季",
         10: "秋季", 11: "秋季", 12: "秋季"
     }
+
+    @staticmethod
+    def get_current_season_tag() -> str:
+        """获取当前季节标签"""
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        season = SeasonHelper.SEASON_MAP.get(month)
+        return f"{year}年{season}番组"
+
+    @staticmethod
+    def is_current_season(season_tag: str) -> bool:
+        """
+        判断是否为当前季节
+
+        Args:
+            season_tag: 季节标签，如 "2025年秋季番组"
+
+        Returns:
+            bool: 是否为当前季节
+        """
+        if not season_tag:
+            return False
+
+        current_tag = SeasonHelper.get_current_season_tag()
+        return season_tag == current_tag
 
     @staticmethod
     def generate_season_tag(first_air_date: str) -> Optional[str]:

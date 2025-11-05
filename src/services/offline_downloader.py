@@ -49,11 +49,14 @@ class OfflineDownloader:
         print(f"\n更新了 {updated_count} 个剧集状态")
         return updated_count
 
-    def check_downloading_status(self):
+    def check_downloading_status(self, enable_notification: bool = False):
         """
         检查 downloading 状态的剧集
         如果已在 OpenList 中，则更新为 openlist_exists
         如果不在 OpenList 中，则回退为 pending（下载失败）
+
+        Args:
+            enable_notification: 是否发送 Telegram 通知
         """
         print("=== 检查 Downloading 状态 ===\n")
 
@@ -81,6 +84,7 @@ class OfflineDownloader:
         # 检查每个 downloading 剧集
         completed_count = 0
         failed_count = 0
+        completed_items = []
 
         for episode in downloading_episodes:
             key = (episode['tmdb_id'], episode['episode_number'])
@@ -92,6 +96,12 @@ class OfflineDownloader:
                 self.db.update_episode_status(episode['id'], 'openlist_exists')
                 completed_count += 1
                 print(f"✓ {series_name} EP{episode['episode_number']:02d} - 下载完成")
+
+                # 记录完成项
+                completed_items.append({
+                    'series_name': series_name,
+                    'episode_number': episode['episode_number']
+                })
             else:
                 # 仍未出现在 OpenList，回退为 pending
                 self.db.update_episode_status(episode['id'], 'pending')
@@ -101,6 +111,16 @@ class OfflineDownloader:
         print(f"\n=== 检查完成 ===")
         print(f"下载完成: {completed_count} 个")
         print(f"下载失败: {failed_count} 个")
+
+        # 发送 Telegram 通知
+        if enable_notification and completed_items:
+            try:
+                from telegram_bot.notifier import TelegramNotifier
+                notifier = TelegramNotifier()
+                notifier.send_notification_sync_batch(completed_items)
+                print(f"\n✓ 已发送 Telegram 通知")
+            except Exception as e:
+                print(f"\n⚠️  发送 Telegram 通知失败: {e}")
 
         return completed_count, failed_count
 
