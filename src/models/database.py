@@ -323,3 +323,54 @@ class Database:
         self.close()
 
         return [dict(row) for row in results]
+
+    def get_max_episode_number(self, tmdb_id: int) -> int:
+        """获取某番剧的最大集数"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT MAX(episode_number) as max_episode FROM episodes
+        WHERE tmdb_id = ?
+        """, (tmdb_id,))
+
+        result = cursor.fetchone()
+        self.close()
+
+        return result['max_episode'] if result['max_episode'] else 0
+
+    def update_series_status(self, tmdb_id: int, status: str):
+        """更新番剧状态"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE series SET status = ?, updated_at = ?
+        WHERE tmdb_id = ?
+        """, (status, datetime.now().isoformat(), tmdb_id))
+
+        conn.commit()
+        self.close()
+
+    def check_and_deactivate_series(self, tmdb_id: int):
+        """检查并失活已完结的番剧"""
+        conn = self.connect()
+        cursor = conn.cursor()
+
+        # 获取番剧的 total_episodes
+        cursor.execute("""
+        SELECT total_episodes FROM series WHERE tmdb_id = ?
+        """, (tmdb_id,))
+
+        result = cursor.fetchone()
+        self.close()
+
+        if not result or not result['total_episodes']:
+            return
+
+        total_episodes = result['total_episodes']
+        max_episode = self.get_max_episode_number(tmdb_id)
+
+        # 如果最大集数达到总集数，失活该番剧
+        if max_episode >= total_episodes:
+            self.update_series_status(tmdb_id, 'inactive')

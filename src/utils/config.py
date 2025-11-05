@@ -33,6 +33,7 @@ class Config:
     OPENLIST_ACCOUNT = os.getenv('OPENLIST_ACCOUNT')
     OPENLIST_PASSWORD = os.getenv('OPENLIST_PASSWORD')
     OPENLIST_DIR = os.getenv('OPENLIST_DIR', '/Animate/Bangumi')
+    OPENLIST_DOWNLOAD_TOOL = os.getenv('OPENLIST_DOWNLOAD_TOOL', 'qbittorrent')
 
     @classmethod
     def validate(cls):

@@ -82,6 +82,9 @@ class EpisodeScraper:
         # 存储 episodes
         self._store_episodes(series, items)
 
+        # 检查是否需要失活
+        self.db.check_and_deactivate_series(tmdb_id)
+
         # 更新刮削时间
         self.db.update_series_last_scraped(tmdb_id)
         print(f"  ✓ 完成")
